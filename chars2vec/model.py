@@ -25,25 +25,18 @@ class Chars2Vec:
         self.vocab_size = len(self.char_to_ix)
         self.dim = emb_dim
         self.cache = {}
+        # this outputs our embedded string
+        self.embedding_model = keras.Sequential()
+        self.embedding_model.add(keras.layers.Input(shape=(None, self.vocab_size)))
+        self.embedding_model.add(keras.layers.LSTM(emb_dim, return_sequences=True))
+        self.embedding_model.add(keras.layers.LSTM(emb_dim))
 
-        lstm_input = keras.layers.Input(shape=(None, self.vocab_size))
-
-        x = keras.layers.LSTM(emb_dim, return_sequences=True)(lstm_input)
-        x = keras.layers.LSTM(emb_dim)(x)
-
-        self.embedding_model = keras.models.Model(inputs=[lstm_input], outputs=x)
-
-        model_input_1 = keras.layers.Input(shape=(None, self.vocab_size))
-        model_input_2 = keras.layers.Input(shape=(None, self.vocab_size))
-
-        embedding_1 = self.embedding_model(model_input_1)
-        embedding_2 = self.embedding_model(model_input_2)
-        x = keras.layers.Subtract()([embedding_1, embedding_2])
-        x = keras.layers.Dot(1)([x, x])
-        model_output = keras.layers.Dense(1, activation='sigmoid')(x)
-
-        self.model = keras.models.Model(inputs=[model_input_1, model_input_2], outputs=model_output)
-        self.model.compile(optimizer='adam', loss='mae')
+        # This is our actual model
+        self.classifier_model = keras.Sequential()
+        self.classifier_model.add(keras.Input(shape=(None, self.vocab_size)))
+        self.classifier_model.add(self.embedding_model)
+        self.classifier_model.add(keras.layers.Dense(1, kernel_initializer='normal', activation='sigmoid'))
+        self.classifier_model.compile(optimizer='adam', loss='mae')
 
 
     def fit(self, word_pairs, targets,
