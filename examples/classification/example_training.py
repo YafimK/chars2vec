@@ -21,7 +21,7 @@ model_chars = ['!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', 
                'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w',
                'x', 'y', 'z']
 
-# Create and train chars2vec model using given training data
+# Create and train chars2vec_classification model using given training data
 my_c2v_model = chars2vec.train_model(dim, X_train, y_train, model_chars)
 
 # Save pretrained model
