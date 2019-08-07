@@ -2,7 +2,7 @@ import numpy as np
 import pickle
 import keras
 import os
-
+from keras.callbacks import TensorBoard
 
 class Chars2Vec_classifier:
 
@@ -40,7 +40,7 @@ class Chars2Vec_classifier:
         self.classifier_model.compile(optimizer='adam', loss='mae')
 
     def fit(self, words, targets,
-            max_epochs, patience, validation_split, batch_size):
+            max_epochs, patience, validation_split, batch_size, is_launch_tensorboard, verbosity):
         '''
         Fits model.
 
@@ -81,11 +81,13 @@ class Chars2Vec_classifier:
             x_1.append(np.array(emb_list_1))
 
         x_1_pad_seq = keras.preprocessing.sequence.pad_sequences(x_1)
-
+        callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss', patience=patience)]
+        if is_launch_tensorboard:
+            callbacks.append(TensorBoard)
         self.classifier_model.fit([x_1_pad_seq], targets,
                                   batch_size=batch_size, epochs=max_epochs,
                                   validation_split=validation_split,
-                                  callbacks=[keras.callbacks.EarlyStopping(monitor='val_loss', patience=patience)])
+                                  callbacks=callbacks, verbose=verbosity)
 
     def vectorize_words(self, words, maxlen_padseq=None):
         '''
@@ -137,49 +139,8 @@ class Chars2Vec_classifier:
 
         return np.array(word_vectors)
 
-
-def save_model(c2v_model, path_to_model, model_name="model"):
-    '''
-    Saves trained model to directory.
-
-    :param model_name: the name to use for the model file.
-    :param c2v_model: Chars2Vec object, trained model.
-    :param path_to_model: str, path to save model.
-    '''
-
-    if not os.path.exists(path_to_model):
-        os.makedirs(path_to_model)
-
-    c2v_model.embedding_model.save_weights(path_to_model + '/weights.h5')
-
-    with open(f'{path_to_model}/{model_name}.pkl', 'wb') as f:
-        pickle.dump([c2v_model.dim, c2v_model.char_to_ix], f, protocol=2)
-
-
-def load_model(path, model_name='model', weights_file='weights'):
-    '''
-    Loads trained model.
-
-    :param path: str, loads model from `path`.
-
-    :return c2v_model: Chars2Vec object, trained model.
-    '''
-
-    path_to_model = path
-
-    with open(f'{path_to_model}/{model_name}.pkl', 'rb') as f:
-        structure = pickle.load(f)
-        emb_dim, char_to_ix = structure[0], structure[1]
-
-    c2v_model = Chars2Vec_classifier(emb_dim, char_to_ix)
-    c2v_model.classifier_model.load_weights(f'{path_to_model}/{weights_file}.h5')
-    c2v_model.classifier_model.compile(optimizer='adam', loss='mae')
-
-    return c2v_model
-
-
 def train_model(emb_dim, X_train, y_train, model_chars,
-                max_epochs=200, patience=10, validation_split=0.05, batch_size=64):
+                max_epochs=200, patience=10, validation_split=0.05, batch_size=64, launch_tensorboard=False, verobsity=1):
     '''
     Creates and trains chars2vec_classification model using given training data.
 
@@ -208,6 +169,6 @@ def train_model(emb_dim, X_train, y_train, model_chars,
     c2v_model = Chars2Vec_classifier(emb_dim, char_to_ix)
 
     targets = [float(el) for el in y_train]
-    c2v_model.fit(X_train, targets, max_epochs, patience, validation_split, batch_size)
+    c2v_model.fit(X_train, targets, max_epochs, patience, validation_split, batch_size, launch_tensorboard, verobsity)
 
     return c2v_model
